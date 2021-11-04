@@ -42,7 +42,7 @@ class BlogPost(db.Model):
     title = db.Column(db.String(250), unique=True, nullable=False)
     subtitle = db.Column(db.String(250), nullable=False)
     date = db.Column(db.String(250), nullable=False)
-    body = db.Column(db.String(5000), nullable=False)
+    body = db.Column(db.Text, nullable=False)
     img_url = db.Column(db.String(250), nullable=False)
 
 #Create the User Table              #PARENT
