@@ -1,12 +1,13 @@
 from flask import Flask, render_template, redirect, url_for, flash
 from flask_bootstrap import Bootstrap
 from flask_ckeditor import CKEditor
-from datetime import date
+from datetime import date, datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
-from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm
+from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm, ContactForm
+from send_email import Send_Email
 import os
 
 
@@ -23,6 +24,8 @@ db = SQLAlchemy(app)
 #Authentication:
 login_manager = LoginManager()
 login_manager.init_app(app)
+
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -91,7 +94,7 @@ def get_all_posts():
         id = ""
 
     return render_template("index.html", all_posts=posts, logged_in=current_user.is_authenticated, user_name=user_name,
-                            id=id)
+                            id=id, currentYear=datetime.now().year)
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -128,10 +131,11 @@ def register():
 
             login_user(new_user)
 
-            return redirect(url_for("get_all_posts", logged_in=current_user.is_authenticated, user_name=current_user.name))
+            return redirect(url_for("get_all_posts", logged_in=current_user.is_authenticated, user_name=current_user.name
+                                    , currentYear=datetime.now().year))
 
 
-    return render_template("register.html", form=form)
+    return render_template("register.html", form=form, currentYear=datetime.now().year)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -143,19 +147,20 @@ def login():
         # Check data, and password hash against written password hash
         if user_data is None:
             error = "We don't have this E-mail in our database"
-            return render_template("login.html", form=form, error=error)
+            return render_template("login.html", form=form, error=error, currentYear=datetime.now().year)
         else:
             # print(f"Database password: {user_data.password} \n Given password: {login_password}")
             if not check_password_hash(pwhash=user_data.password, password=form.password.data):
                 error = "Give password don't match to given email accounts"
-                return render_template("login.html", form=form, error=error, )
+                return render_template("login.html", form=form, error=error, currentYear=datetime.now().year )
             else:
 
                 login_user(user_data)
 
-                return redirect(url_for('get_all_posts', logged_in=current_user.is_authenticated, user_name = current_user.name))
+                return redirect(url_for('get_all_posts', logged_in=current_user.is_authenticated, user_name = current_user.name
+                                        , currentYear=datetime.now().year))
 
-    return render_template("login.html", form=form,)
+    return render_template("login.html", form=form, currentYear=datetime.now().year)
 
 
 @app.route('/logout')
@@ -167,7 +172,14 @@ def logout():
 @app.route("/post/<int:post_id>", methods=['GET', 'POST'])
 def show_post(post_id):
     form = CommentForm()
-    user_name = current_user.name
+
+    logged_in = current_user.is_authenticated
+    if logged_in:
+        user_name = current_user.name
+    else:
+        user_name = ""
+
+    # user_name = current_user.name
     requested_post = BlogPost.query.get(post_id)
     if form.validate_on_submit():
 
@@ -188,7 +200,7 @@ def show_post(post_id):
         # # return render_template("post.html", post=requested_post, current_user=current_user, form=form)
 
     return render_template("post.html", post=requested_post, current_user=current_user, form=form,
-                           logged_in=current_user.is_authenticated, user_name=user_name)
+                           logged_in=current_user.is_authenticated, user_name=user_name, currentYear=datetime.now().year)
 
 
 @app.route("/about")
@@ -199,17 +211,31 @@ def about():
     else:
         user_name = ""
 
-    return render_template("about.html", logged_in=current_user.is_authenticated, user_name = user_name)
+    return render_template("about.html", logged_in=current_user.is_authenticated, user_name = user_name
+                           , currentYear=datetime.now().year)
 
 
-@app.route("/contact")
+@app.route("/contact", methods=['GET', 'POST'])
 def contact():
     logged_in = current_user.is_authenticated
     if logged_in:
         user_name = current_user.name
     else:
         user_name = ""
-    return render_template("contact.html", logged_in=current_user.is_authenticated, user_name =  user_name)
+
+    form = ContactForm()
+    if form.validate_on_submit():
+        print(f"{form.name.data} \n"
+              f"{form.email.data} \n"
+              f"{form.message.data} \n")
+        Send_Email( msg_name=form.name.data,
+                    msg_email=form.email.data,
+                    msg_message=form.message.data)
+        flash("Thank you for your message")
+        return redirect(url_for("contact"))
+
+    return render_template("contact.html", logged_in=current_user.is_authenticated, user_name=user_name
+                           , currentYear=datetime.now().year, form=form)
 
 
 @app.route("/new-post", methods=['GET', 'POST'])
@@ -230,7 +256,8 @@ def add_new_post():
 
         return redirect(url_for("get_all_posts"))
 
-    return render_template("make-post.html", form=form, logged_in=current_user.is_authenticated, user_name = current_user.name)
+    return render_template("make-post.html", form=form, logged_in=current_user.is_authenticated,
+                           user_name=current_user.name, currentYear=datetime.now().year)
 
 
 @app.route("/edit-post/<int:post_id>", methods=['GET', 'POST'])
@@ -251,7 +278,8 @@ def edit_post(post_id):
         db.session.commit()
         return redirect(url_for("show_post", post_id=post.id, logged_in=current_user.is_authenticated, user_name = current_user.name))
 
-    return render_template("make-post.html", form=edit_form, logged_in=current_user.is_authenticated, user_name = current_user.name)
+    return render_template("make-post.html", form=edit_form, logged_in=current_user.is_authenticated, user_name = current_user.name
+                           , currentYear=datetime.now().year)
 
 
 @app.route("/delete/<int:post_id>")
