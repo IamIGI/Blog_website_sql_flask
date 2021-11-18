@@ -1,9 +1,9 @@
 import smtplib
 import os
 
-MY_EMAIL = os.environ.get('EMAIL_SENDER')
-PASSWORD = os.environ.get('PASSWORD_SENDER')
-CHOOSE_EMAIL = os.environ.get('BUSINESS_EMAIL')
+MY_EMAIL = os.environ.get('EMAIL_SENDER', 'testemail1998123@gmail.com')     #remover after
+PASSWORD = os.environ.get('PASSWORD_SENDER','PythonPassword123')    #remover after
+CHOOSE_EMAIL = os.environ.get('BUSINESS_EMAIL', 'igorigi1998@gmail.com')    #remove after
 
 class Send_Email():
     def __init__(self, msg_name, msg_email, msg_message):

@@ -12,7 +12,7 @@ import os
 
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY','8BYkEfBA6O6donzWlSihBXox7C0sKR6b')
 ckeditor = CKEditor(app)
 Bootstrap(app)
 
@@ -225,12 +225,15 @@ def contact():
 
     form = ContactForm()
     if form.validate_on_submit():
-        print(f"{form.name.data} \n"
+        print(f"{form.name.data} \n "
               f"{form.email.data} \n"
               f"{form.message.data} \n")
+        message = form.message.data.replace("<p>", "")
+        message = message.replace("</p>", "")
         Send_Email( msg_name=form.name.data,
                     msg_email=form.email.data,
-                    msg_message=form.message.data)
+                    msg_message=message)
+
         flash("Thank you for your message")
         return redirect(url_for("contact"))
 
